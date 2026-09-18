@@ -69,6 +69,7 @@ const {
   createInvoice,
   getInvoices,
   markInvoicePaid,
+  updateInvoice,
   getMediaKit,
   updateMediaKit,
 } = require("../../controller/creatorCrmController");
@@ -240,6 +241,34 @@ describe("Creator CRM Controller", () => {
         { new: true }
       );
       expect(res.json).toHaveBeenCalledWith({ success: true, data: { _id: "i1", status: "paid" } });
+    });
+  });
+
+  describe("updates cannot change the owner", () => {
+    const otherCreator = "64b7f1f1f1f1f1f1f1f1f1f2";
+    const hostileBody = () => ({
+      creatorId: otherCreator,
+      _id: "someone-elses-id",
+      createdAt: "2020-01-01",
+      status: "partner",
+    });
+
+    it.each([
+      ["brand", () => updateBrand, () => CrmBrand],
+      ["deal", () => updateDeal, () => CrmDeal],
+      ["invoice", () => updateInvoice, () => CrmInvoice],
+    ])("strips creatorId, _id and timestamps from a %s update", async (_label, handler, model) => {
+      req.params = { id: "r1" };
+      req.body = hostileBody();
+      model().findOneAndUpdate.mockResolvedValue({ _id: "r1", status: "partner" });
+
+      await handler()(req, res);
+
+      expect(model().findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: "r1", creatorId: userId },
+        { $set: { status: "partner" } },
+        { new: true, runValidators: true }
+      );
     });
   });
 

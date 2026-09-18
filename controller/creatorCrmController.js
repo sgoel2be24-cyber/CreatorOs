@@ -9,6 +9,22 @@ function getUserId(req) {
   return req.user?.id || req.user?._id;
 }
 
+/**
+ * Fields a client may never change through an update: the owner and the
+ * record's identity and bookkeeping. `{ $set: req.body }` passed them straight
+ * through, so an owner could set `creatorId` and move a brand, deal or invoice
+ * into another creator's CRM.
+ */
+const PROTECTED_UPDATE_FIELDS = ["_id", "creatorId", "createdAt", "updatedAt", "__v"];
+
+function updatableFields(body) {
+  const fields = { ...(body || {}) };
+  for (const field of PROTECTED_UPDATE_FIELDS) {
+    delete fields[field];
+  }
+  return fields;
+}
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -311,7 +327,7 @@ const updateBrand = asyncHandler(async (req, res) => {
   const userId = getUserId(req);
   const brand = await CrmBrand.findOneAndUpdate(
     { _id: req.params.id, creatorId: userId },
-    { $set: req.body },
+    { $set: updatableFields(req.body) },
     { new: true, runValidators: true }
   );
 
@@ -384,7 +400,7 @@ const updateDeal = asyncHandler(async (req, res) => {
   const userId = getUserId(req);
   const deal = await CrmDeal.findOneAndUpdate(
     { _id: req.params.id, creatorId: userId },
-    { $set: req.body },
+    { $set: updatableFields(req.body) },
     { new: true, runValidators: true }
   );
 
@@ -485,7 +501,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const userId = getUserId(req);
   const invoice = await CrmInvoice.findOneAndUpdate(
     { _id: req.params.id, creatorId: userId },
-    { $set: req.body },
+    { $set: updatableFields(req.body) },
     { new: true, runValidators: true }
   );
 
