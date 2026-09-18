@@ -91,6 +91,13 @@ let mockTasks = [
   },
 ];
 
+/**
+ * Options for every Task update. Mongoose skips schema validators on
+ * findByIdAndUpdate unless asked, so a status of "banana" or an unknown
+ * priority was stored as-is and broke the board's column grouping.
+ */
+const UPDATE_OPTIONS = { new: true, runValidators: true };
+
 function isMockMode() {
   return process.env.USE_MOCK_DB === "true" || mongoose.connection.readyState !== 1;
 }
@@ -312,7 +319,8 @@ const updateTask = asyncHandler(async (req, res) => {
     return res.json({ success: true, task: updated });
   }
 
-  const taskDoc = await Task.findByIdAndUpdate(taskId, req.body, { new: true });
+  const taskDoc = await Task.findByIdAndUpdate(taskId, req.body, UPDATE_OPTIONS);
+  if (!taskDoc) return res.status(404).json({ success: false, error: "Task not found." });
   res.json({ success: true, task: taskDoc });
 });
 
@@ -330,7 +338,8 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
     return res.json({ success: true, task });
   }
 
-  const taskDoc = await Task.findByIdAndUpdate(taskId, { status }, { new: true });
+  const taskDoc = await Task.findByIdAndUpdate(taskId, { status }, UPDATE_OPTIONS);
+  if (!taskDoc) return res.status(404).json({ success: false, error: "Task not found." });
   res.json({ success: true, task: taskDoc });
 });
 
@@ -348,7 +357,8 @@ const updateSubtasks = asyncHandler(async (req, res) => {
     return res.json({ success: true, task });
   }
 
-  const taskDoc = await Task.findByIdAndUpdate(taskId, { subtasks }, { new: true });
+  const taskDoc = await Task.findByIdAndUpdate(taskId, { subtasks }, UPDATE_OPTIONS);
+  if (!taskDoc) return res.status(404).json({ success: false, error: "Task not found." });
   res.json({ success: true, task: taskDoc });
 });
 
